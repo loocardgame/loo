@@ -4,20 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Loo Card Game — MVP</title>
+  <title>Loo Card Game</title>
 
   <style>
     :root {
-      --bg: #07110c;
-      --panel: #101d16;
-      --panel2: #14271d;
-      --gold: #d5b56b;
+      --bg: #050706;
+      --panel: #101812;
+      --panel2: #16251b;
+      --gold: #d8b76c;
       --green: #0d5b2a;
-      --text: #f4f1e8;
-      --muted: #aeb7ad;
-      --danger: #ff6b6b;
+      --text: #f6f1e7;
+      --muted: #aeb8ad;
+      --danger: #e95f5f;
       --ok: #7ee787;
-      --border: rgba(213, 181, 107, 0.25);
+      --border: rgba(216, 183, 108, 0.24);
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
     }
 
     * {
@@ -28,85 +29,94 @@
       margin: 0;
       min-height: 100vh;
       background:
-        radial-gradient(circle at top, rgba(213, 181, 107, 0.14), transparent 35%),
-        linear-gradient(135deg, #050806, var(--bg));
+        radial-gradient(circle at top, rgba(216, 183, 108, 0.12), transparent 35%),
+        linear-gradient(135deg, #030403, var(--bg));
       color: var(--text);
       font-family: Arial, Helvetica, sans-serif;
     }
 
-    header {
-      padding: 24px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(0, 0, 0, 0.25);
+    .hidden {
+      display: none !important;
     }
 
-    header h1 {
-      margin: 0;
-      letter-spacing: 1px;
-      color: var(--gold);
-    }
-
-    header p {
-      margin: 8px 0 0;
-      color: var(--muted);
-    }
-
-    main {
+    .login-page {
+      min-height: 100vh;
       display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 18px;
-      padding: 18px;
+      place-items: center;
+      padding: 24px;
     }
 
-    .card {
+    .login-card {
+      width: min(420px, 100%);
       background: linear-gradient(180deg, var(--panel), var(--panel2));
       border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
-      margin-bottom: 16px;
+      border-radius: 26px;
+      padding: 30px;
+      box-shadow: var(--shadow);
     }
 
-    .card h2 {
-      margin: 0 0 12px;
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 26px;
+    }
+
+    .logo-img {
+      width: 170px;
+      max-width: 70%;
+      margin: 0 auto 12px;
+      display: block;
+    }
+
+    .logo-fallback {
+      font-size: 34px;
+      font-weight: 900;
       color: var(--gold);
-      font-size: 18px;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
 
     label {
       display: block;
-      margin: 10px 0 6px;
+      margin: 12px 0 6px;
       color: var(--muted);
       font-size: 13px;
     }
 
-    input {
+    input, select {
       width: 100%;
       border: 1px solid var(--border);
-      background: #07110c;
+      background: #070c09;
       color: var(--text);
-      border-radius: 10px;
-      padding: 11px;
+      border-radius: 12px;
+      padding: 13px;
       outline: none;
+      font-size: 15px;
     }
 
-    input:focus {
+    input:focus, select:focus {
       border-color: var(--gold);
     }
 
     button {
       border: 0;
-      border-radius: 10px;
-      padding: 11px 13px;
-      margin: 8px 6px 0 0;
+      border-radius: 12px;
+      padding: 12px 15px;
       background: var(--gold);
-      color: #15120a;
+      color: #171207;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 800;
+      font-size: 14px;
     }
 
     button.secondary {
-      background: #254233;
+      background: #243d2f;
       color: var(--text);
       border: 1px solid var(--border);
     }
@@ -116,45 +126,164 @@
       color: white;
     }
 
-    .grid {
+    button.full {
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+
+    .brand img {
+      width: 46px;
+      height: 46px;
+      object-fit: contain;
+    }
+
+    .userbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .content {
+      padding: 22px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .grid-admin {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 16px 42px rgba(0,0,0,0.2);
+      margin-bottom: 18px;
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      color: var(--gold);
+      font-size: 19px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
     .status {
-      padding: 10px;
-      border-radius: 10px;
+      padding: 12px;
+      border-radius: 14px;
       background: rgba(255,255,255,0.05);
       color: var(--muted);
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       font-size: 13px;
-      max-height: 240px;
+      max-height: 220px;
       overflow: auto;
     }
 
-    .pill {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(213, 181, 107, 0.12);
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      min-width: 760px;
+    }
+
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      padding: 10px;
+      vertical-align: middle;
+    }
+
+    th {
       color: var(--gold);
-      border: 1px solid var(--border);
-      margin: 2px;
       font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
     }
 
-    .list-item {
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 10px;
-      background: rgba(0,0,0,0.18);
-    }
-
-    .list-item strong {
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
       color: var(--gold);
+      background: rgba(216, 183, 108, 0.10);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .pill.ok {
+      color: var(--ok);
+      border-color: rgba(126, 231, 135, 0.35);
+      background: rgba(126, 231, 135, 0.08);
+    }
+
+    .pill.blocked {
+      color: var(--danger);
+      border-color: rgba(233, 95, 95, 0.35);
+      background: rgba(233, 95, 95, 0.08);
+    }
+
+    .hall-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .table-card {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .table-card h3 {
+      color: var(--gold);
+      margin: 0 0 8px;
     }
 
     .small {
@@ -163,182 +292,202 @@
       overflow-wrap: anywhere;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    th, td {
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      text-align: left;
-      padding: 8px;
-      vertical-align: top;
-    }
-
-    th {
-      color: var(--gold);
-    }
-
-    @media (max-width: 900px) {
-      main {
+    @media (max-width: 960px) {
+      .grid-admin {
         grid-template-columns: 1fr;
       }
 
-      .grid {
+      .hall-grid {
         grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        height: auto;
+        padding: 14px;
+        gap: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .userbar {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .content {
+        padding: 14px;
+      }
+
+      .login-card {
+        padding: 22px;
+        border-radius: 22px;
+      }
+
+      .logo-fallback {
+        font-size: 28px;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .row button {
+        flex: 1;
       }
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <h1>LOO CARD GAME</h1>
-    <p>MVP inicial com login simples, mesas, carteiras e fichas rastreáveis.</p>
-  </header>
-
-  <main>
-    <section>
-      <div class="card">
-        <h2>1. Cadastro</h2>
-
-        <label>Usuário</label>
-        <input id="registerUsername" placeholder="ex: eder" />
-
-        <label>Nome exibido</label>
-        <input id="registerDisplayName" placeholder="ex: Éder" />
-
-        <label>E-mail opcional</label>
-        <input id="registerEmail" placeholder="ex: email@exemplo.com" />
-
-        <label>Senha</label>
-        <input id="registerPassword" type="password" placeholder="mínimo 6 caracteres" />
-
-        <button onclick="registerUser()">Cadastrar</button>
+  <!-- LOGIN -->
+  <section id="loginPage" class="login-page">
+    <div class="login-card">
+      <div class="logo-wrap">
+        <img class="logo-img" src="/logo.png" alt="Loo Card Game" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='block';" />
+        <div id="logoFallback" class="logo-fallback" style="display:none;">LOO</div>
+        <div class="subtitle">Card Game</div>
       </div>
 
-      <div class="card">
-        <h2>2. Login</h2>
+      <label>Usuário</label>
+      <input id="loginField" autocomplete="username" placeholder="Digite seu usuário" />
 
-        <label>Usuário ou e-mail</label>
-        <input id="loginField" placeholder="username ou email" />
+      <label>Senha</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha" />
 
-        <label>Senha</label>
-        <input id="loginPassword" type="password" />
+      <button class="full" onclick="loginUser()">OK</button>
 
-        <button onclick="loginUser()">Entrar</button>
+      <div id="loginMessage" class="status" style="margin-top:16px;">Aguardando login.</div>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="appPage" class="app-shell hidden">
+    <div class="topbar">
+      <div class="brand">
+        <img src="/logo.png" alt="LOO" onerror="this.style.display='none';" />
+        <span>LOO CARD GAME</span>
+      </div>
+
+      <div class="userbar">
+        <span id="loggedUserLabel">Usuário</span>
         <button class="secondary" onclick="logout()">Sair</button>
+      </div>
+    </div>
 
-        <div style="margin-top: 12px;">
-          <span class="pill" id="loginStatus">Não logado</span>
+    <main class="content">
+      <!-- ADMIN -->
+      <section id="adminPage" class="hidden">
+        <div class="grid-admin">
+          <aside>
+            <div class="card">
+              <h2>Criar usuário</h2>
+
+              <label>Nick</label>
+              <input id="newUsername" placeholder="ex: joao" />
+
+              <label>Senha</label>
+              <input id="newPassword" type="password" placeholder="mínimo 6 caracteres" />
+
+              <button class="full" onclick="createUser()">Cadastrar usuário</button>
+            </div>
+
+            <div class="card">
+              <h2>Adicionar fichas</h2>
+
+              <label>Usuário</label>
+              <select id="chipsUserSelect"></select>
+
+              <label>Valor manual</label>
+              <input id="customChipsAmount" type="number" min="1" placeholder="ex: 75" />
+
+              <div class="row" style="margin-top:12px;">
+                <button onclick="addChips(20)">+20</button>
+                <button onclick="addChips(50)">+50</button>
+                <button onclick="addChips(100)">+100</button>
+                <button class="secondary" onclick="addCustomChips()">Adicionar valor</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Criar mesa simples</h2>
+
+              <label>Nome da mesa</label>
+              <input id="newTableName" placeholder="Mesa dos Amigos" />
+
+              <button class="full" onclick="createTable()">Criar mesa</button>
+            </div>
+
+            <div class="card">
+              <h2>Status</h2>
+              <div id="adminStatus" class="status">Pronto.</div>
+            </div>
+          </aside>
+
+          <section>
+            <div class="card">
+              <div class="row" style="justify-content:space-between;">
+                <h2>Usuários cadastrados</h2>
+                <button class="secondary" onclick="loadAdminUsers()">Atualizar</button>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nick</th>
+                      <th>Perfil</th>
+                      <th>Fichas</th>
+                      <th>Bloqueio</th>
+                      <th>Mesas bloqueadas</th>
+                      <th>Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUsersTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <h2>3. Mesa</h2>
-
-        <label>Nome da mesa</label>
-        <input id="tableName" placeholder="Mesa dos Amigos" />
-
-        <button onclick="createTable()">Criar mesa</button>
-        <button class="secondary" onclick="loadTables()">Atualizar mesas</button>
-        <button class="secondary" onclick="createDemo()">Criar demo</button>
-      </div>
-
-      <div class="card">
-        <h2>Status</h2>
-        <div id="statusBox" class="status">Aguardando ação...</div>
-      </div>
-    </section>
-
-    <section>
-      <div class="grid">
+      <!-- HALL -->
+      <section id="hallPage" class="hidden">
         <div class="card">
-          <h2>Usuário atual</h2>
-          <div id="currentUserBox" class="status">Nenhum usuário logado.</div>
-          <button class="secondary" onclick="loadMe()">Atualizar usuário</button>
-          <button class="secondary" onclick="loadMyWallets()">Minhas carteiras</button>
+          <h2>Hall de mesas</h2>
+          <div id="hallSummary" class="status">Carregando...</div>
         </div>
 
         <div class="card">
-          <h2>Carteiras</h2>
-          <div id="walletsBox" class="status">Sem dados.</div>
+          <div class="row" style="justify-content:space-between;">
+            <h2>Mesas disponíveis</h2>
+            <button class="secondary" onclick="loadHall()">Atualizar</button>
+          </div>
+
+          <div id="hallTables" class="hall-grid"></div>
         </div>
-      </div>
-
-      <div class="card">
-        <h2>Mesas</h2>
-        <div id="tablesBox">Clique em “Atualizar mesas”.</div>
-      </div>
-
-      <div class="card">
-        <h2>Membros da mesa selecionada</h2>
-        <div id="membersBox">Nenhuma mesa selecionada.</div>
-      </div>
-
-      <div class="card">
-        <h2>Rastreio de fichas</h2>
-        <button class="secondary" onclick="loadChipTrace()">Atualizar rastreio</button>
-        <div id="chipsBox" class="status" style="margin-top: 10px;">Sem dados.</div>
-      </div>
-    </section>
-  </main>
+      </section>
+    </main>
+  </section>
 
   <script>
     const API = window.location.origin;
 
     let token = localStorage.getItem("loo_token") || "";
     let currentUser = JSON.parse(localStorage.getItem("loo_user") || "null");
-    let selectedTableId = localStorage.getItem("loo_selected_table") || "";
+    let adminUsers = [];
 
-    function setStatus(message, data) {
-      const box = document.getElementById("statusBox");
-      box.textContent = message + (data ? "\n\n" + JSON.stringify(data, null, 2) : "");
+    function qs(id) {
+      return document.getElementById(id);
     }
 
-    function saveAuth(newToken, user) {
-      token = newToken;
-      currentUser = user;
-
-      localStorage.setItem("loo_token", token);
-      localStorage.setItem("loo_user", JSON.stringify(user));
-
-      updateLoginStatus();
-      renderCurrentUser();
+    function setText(id, text) {
+      qs(id).textContent = text;
     }
 
-    function logout() {
-      token = "";
-      currentUser = null;
-
-      localStorage.removeItem("loo_token");
-      localStorage.removeItem("loo_user");
-
-      updateLoginStatus();
-      renderCurrentUser();
-      setStatus("Logout realizado.");
-    }
-
-    function updateLoginStatus() {
-      const el = document.getElementById("loginStatus");
-
-      if (currentUser) {
-        el.textContent = "Logado: " + currentUser.displayName;
-      } else {
-        el.textContent = "Não logado";
-      }
-    }
-
-    function renderCurrentUser() {
-      const box = document.getElementById("currentUserBox");
-
-      if (!currentUser) {
-        box.textContent = "Nenhum usuário logado.";
-        return;
-      }
-
-      box.textContent = JSON.stringify(currentUser, null, 2);
+    function isAdmin(user) {
+      return user && ["SYSTEM_ADMIN", "TABLE_ADMIN"].includes(user.role);
     }
 
     async function api(path, options = {}) {
@@ -365,24 +514,28 @@
       return data;
     }
 
-    async function registerUser() {
-      try {
-        const data = await api("/api/auth/register", {
-          method: "POST",
-          body: JSON.stringify({
-            username: document.getElementById("registerUsername").value,
-            displayName: document.getElementById("registerDisplayName").value,
-            email: document.getElementById("registerEmail").value,
-            password: document.getElementById("registerPassword").value,
-            avatarEmoji: "🃏"
-          })
-        });
+    function showLogin() {
+      qs("loginPage").classList.remove("hidden");
+      qs("appPage").classList.add("hidden");
+      qs("adminPage").classList.add("hidden");
+      qs("hallPage").classList.add("hidden");
+    }
 
-        saveAuth(data.token, data.user);
-        setStatus("Usuário cadastrado.", data);
-        await loadMyWallets();
-      } catch (error) {
-        setStatus("Erro no cadastro: " + error.message);
+    function showApp() {
+      qs("loginPage").classList.add("hidden");
+      qs("appPage").classList.remove("hidden");
+
+      qs("loggedUserLabel").textContent =
+        `${currentUser.avatarEmoji || "🃏"} ${currentUser.displayName} — ${currentUser.role}`;
+
+      if (isAdmin(currentUser)) {
+        qs("adminPage").classList.remove("hidden");
+        qs("hallPage").classList.add("hidden");
+        loadAdminUsers();
+      } else {
+        qs("adminPage").classList.add("hidden");
+        qs("hallPage").classList.remove("hidden");
+        loadHall();
       }
     }
 
@@ -391,223 +544,211 @@
         const data = await api("/api/auth/login", {
           method: "POST",
           body: JSON.stringify({
-            login: document.getElementById("loginField").value,
-            password: document.getElementById("loginPassword").value
+            login: qs("loginField").value,
+            password: qs("loginPassword").value
           })
         });
 
-        saveAuth(data.token, data.user);
-        setStatus("Login realizado.", data);
-        await loadMyWallets();
+        token = data.token;
+        currentUser = data.user;
+
+        localStorage.setItem("loo_token", token);
+        localStorage.setItem("loo_user", JSON.stringify(currentUser));
+
+        showApp();
       } catch (error) {
-        setStatus("Erro no login: " + error.message);
+        setText("loginMessage", "Erro: " + error.message);
       }
     }
 
-    async function loadMe() {
+    function logout() {
+      token = "";
+      currentUser = null;
+
+      localStorage.removeItem("loo_token");
+      localStorage.removeItem("loo_user");
+
+      showLogin();
+    }
+
+    async function loadMeOnStart() {
+      if (!token) {
+        showLogin();
+        return;
+      }
+
       try {
         const data = await api("/api/me");
         currentUser = data.user;
         localStorage.setItem("loo_user", JSON.stringify(currentUser));
-
-        updateLoginStatus();
-        renderCurrentUser();
-        setStatus("Usuário carregado.", data);
+        showApp();
       } catch (error) {
-        setStatus("Erro ao carregar usuário: " + error.message);
+        logout();
       }
     }
 
-    async function loadMyWallets() {
+    async function loadAdminUsers() {
       try {
-        const data = await api("/api/wallets/me");
+        const data = await api("/api/admin/users");
+        adminUsers = data.users;
 
-        document.getElementById("walletsBox").textContent = JSON.stringify(data.wallets, null, 2);
-        setStatus("Carteiras carregadas.", { total: data.total });
+        qs("chipsUserSelect").innerHTML = adminUsers
+          .map(u => `<option value="${u.id}">${u.username} — ${u.global_balance} fichas</option>`)
+          .join("");
+
+        qs("adminUsersTable").innerHTML = adminUsers.map(u => `
+          <tr>
+            <td>
+              <strong>${u.username}</strong>
+              <div class="small">${u.display_name}</div>
+            </td>
+            <td><span class="pill">${u.role}</span></td>
+            <td>${Number(u.global_balance).toFixed(2)}</td>
+            <td>
+              ${u.is_banned
+                ? `<span class="pill blocked">Bloqueado</span>`
+                : `<span class="pill ok">Liberado</span>`
+              }
+            </td>
+            <td>${u.blocked_tables_count}</td>
+            <td>
+              ${u.is_banned
+                ? `<button class="secondary" onclick="toggleBan('${u.id}', false)">Desbloquear</button>`
+                : `<button class="danger" onclick="toggleBan('${u.id}', true)">Bloquear</button>`
+              }
+            </td>
+          </tr>
+        `).join("");
+
+        setText("adminStatus", `Usuários carregados: ${data.total}`);
       } catch (error) {
-        setStatus("Erro ao carregar carteiras: " + error.message);
+        setText("adminStatus", "Erro ao carregar usuários: " + error.message);
       }
+    }
+
+    async function createUser() {
+      try {
+        const data = await api("/api/admin/users", {
+          method: "POST",
+          body: JSON.stringify({
+            username: qs("newUsername").value,
+            password: qs("newPassword").value
+          })
+        });
+
+        setText("adminStatus", "Usuário criado: " + data.user.username);
+
+        qs("newUsername").value = "";
+        qs("newPassword").value = "";
+
+        await loadAdminUsers();
+      } catch (error) {
+        setText("adminStatus", "Erro ao criar usuário: " + error.message);
+      }
+    }
+
+    async function toggleBan(userId, blocked) {
+      try {
+        await api(`/api/admin/users/${userId}/toggle-ban`, {
+          method: "POST",
+          body: JSON.stringify({ blocked })
+        });
+
+        await loadAdminUsers();
+      } catch (error) {
+        setText("adminStatus", "Erro ao alterar bloqueio: " + error.message);
+      }
+    }
+
+    async function addChips(amount) {
+      try {
+        const userId = qs("chipsUserSelect").value;
+
+        const data = await api("/api/admin/chips/add-global", {
+          method: "POST",
+          body: JSON.stringify({
+            userId,
+            amount
+          })
+        });
+
+        setText("adminStatus", `Adicionadas ${amount} fichas.`);
+        await loadAdminUsers();
+      } catch (error) {
+        setText("adminStatus", "Erro ao adicionar fichas: " + error.message);
+      }
+    }
+
+    async function addCustomChips() {
+      const amount = Number(qs("customChipsAmount").value || 0);
+
+      if (!amount || amount <= 0) {
+        setText("adminStatus", "Digite um valor válido.");
+        return;
+      }
+
+      await addChips(amount);
+      qs("customChipsAmount").value = "";
     }
 
     async function createTable() {
       try {
-        const data = await api("/api/tables", {
+        const name = qs("newTableName").value || "Mesa dos Amigos";
+
+        const data = await api("/api/admin/tables", {
           method: "POST",
-          body: JSON.stringify({
-            name: document.getElementById("tableName").value || "Mesa dos Amigos",
-            maxPlayers: 6,
-            initialChips: 50
-          })
+          body: JSON.stringify({ name })
         });
 
-        selectedTableId = data.table.id;
-        localStorage.setItem("loo_selected_table", selectedTableId);
-
-        setStatus("Mesa criada.", data);
-        await loadTables();
-        await loadMembers(selectedTableId);
-        await loadMyWallets();
+        setText("adminStatus", "Mesa criada: " + data.table.name);
+        qs("newTableName").value = "";
       } catch (error) {
-        setStatus("Erro ao criar mesa: " + error.message);
+        setText("adminStatus", "Erro ao criar mesa: " + error.message);
       }
     }
 
-    async function loadTables() {
+    async function loadHall() {
       try {
-        const data = await api("/api/tables");
+        const data = await api("/api/hall");
 
-        const box = document.getElementById("tablesBox");
+        qs("hallSummary").textContent =
+          `Jogador: ${data.user.display_name}\nFichas globais: ${data.user.global_balance}\nPerfil: ${currentUser.role}`;
 
         if (!data.tables.length) {
-          box.innerHTML = "<div class='small'>Nenhuma mesa criada.</div>";
+          qs("hallTables").innerHTML = `<div class="small">Nenhuma mesa disponível no momento.</div>`;
           return;
         }
 
-        box.innerHTML = data.tables.map(table => `
-          <div class="list-item">
-            <strong>${table.name}</strong>
-            <div class="small">ID: ${table.id}</div>
-            <div class="small">Dono: ${table.owner_name || "-"}</div>
-            <div class="small">Status: ${table.status} | Jogadores: ${table.members_count}</div>
-            <div class="small">Convite: ${table.invite_code}</div>
-            <button onclick="selectTable('${table.id}')">Selecionar</button>
-            <button class="secondary" onclick="joinTable('${table.id}')">Entrar</button>
-            <button class="secondary" onclick="loadMembers('${table.id}')">Ver membros</button>
+        qs("hallTables").innerHTML = data.tables.map(t => `
+          <div class="table-card">
+            <h3>${t.name}</h3>
+            <div class="small">Dono: ${t.owner_name}</div>
+            <div class="small">Status: ${t.status}</div>
+            <div class="small">Jogadores: ${t.members_count}/${t.max_players}</div>
+            <div class="small">Convite: ${t.invite_code}</div>
+            <button style="margin-top:12px;" onclick="joinTable('${t.id}')">Entrar na mesa</button>
           </div>
         `).join("");
-
-        setStatus("Mesas carregadas.", { total: data.total });
       } catch (error) {
-        setStatus("Erro ao carregar mesas: " + error.message);
+        qs("hallSummary").textContent = "Erro ao carregar hall: " + error.message;
       }
-    }
-
-    function selectTable(tableId) {
-      selectedTableId = tableId;
-      localStorage.setItem("loo_selected_table", selectedTableId);
-      setStatus("Mesa selecionada: " + tableId);
-      loadMembers(tableId);
     }
 
     async function joinTable(tableId) {
       try {
-        const data = await api("/api/tables/" + tableId + "/join", {
+        const data = await api(`/api/tables/${tableId}/join`, {
           method: "POST",
           body: JSON.stringify({})
         });
 
-        selectedTableId = tableId;
-        localStorage.setItem("loo_selected_table", selectedTableId);
-
-        setStatus("Entrada na mesa realizada.", data);
-        await loadMembers(tableId);
-        await loadMyWallets();
+        alert(data.message);
+        await loadHall();
       } catch (error) {
-        setStatus("Erro ao entrar na mesa: " + error.message);
+        alert("Erro: " + error.message);
       }
     }
 
-    async function loadMembers(tableId) {
-      try {
-        selectedTableId = tableId;
-        localStorage.setItem("loo_selected_table", selectedTableId);
-
-        const data = await api("/api/tables/" + tableId + "/members");
-
-        const box = document.getElementById("membersBox");
-
-        if (!data.members.length) {
-          box.innerHTML = "<div class='small'>Nenhum membro na mesa.</div>";
-          return;
-        }
-
-        box.innerHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th>Assento</th>
-                <th>Jogador</th>
-                <th>Status</th>
-                <th>Saldo</th>
-                <th>Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.members.map(m => `
-                <tr>
-                  <td>${m.seat_number || "-"}</td>
-                  <td>${m.avatar_emoji || "🃏"} ${m.display_name}</td>
-                  <td>${m.member_status}</td>
-                  <td>${m.balance || 0}</td>
-                  <td>
-                    ${m.wallet_id ? `<button onclick="addChips('${m.wallet_id}')">+50</button>` : "-"}
-                  </td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        `;
-
-        setStatus("Membros carregados.", { total: data.total, tableId });
-      } catch (error) {
-        setStatus("Erro ao carregar membros: " + error.message);
-      }
-    }
-
-    async function addChips(walletId) {
-      try {
-        const data = await api("/api/chips/add", {
-          method: "POST",
-          body: JSON.stringify({
-            toWalletId: walletId,
-            amount: 50,
-            description: "Adição manual pelo painel MVP."
-          })
-        });
-
-        setStatus("Fichas adicionadas.", data);
-
-        if (selectedTableId) {
-          await loadMembers(selectedTableId);
-        }
-
-        await loadChipTrace();
-      } catch (error) {
-        setStatus("Erro ao adicionar fichas: " + error.message);
-      }
-    }
-
-    async function loadChipTrace() {
-      try {
-        const data = await api("/api/chips/trace");
-
-        document.getElementById("chipsBox").textContent = JSON.stringify(data.transactions, null, 2);
-        setStatus("Rastreio de fichas carregado.", { total: data.total });
-      } catch (error) {
-        setStatus("Erro ao carregar rastreio: " + error.message);
-      }
-    }
-
-    async function createDemo() {
-      try {
-        const data = await api("/api/demo/create");
-
-        setStatus("Demo criada. Senha dos usuários demo: 123456", data);
-
-        selectedTableId = data.table.id;
-        localStorage.setItem("loo_selected_table", selectedTableId);
-
-        await loadTables();
-        await loadMembers(selectedTableId);
-        await loadChipTrace();
-      } catch (error) {
-        setStatus("Erro ao criar demo: " + error.message);
-      }
-    }
-
-    updateLoginStatus();
-    renderCurrentUser();
-    loadTables().catch(() => {});
+    loadMeOnStart();
   </script>
 </body>
 </html>
