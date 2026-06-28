@@ -1,7 +1,7 @@
 {
   "name": "loo-api",
-  "version": "0.3.0",
-  "description": "Backend inicial do Lu Online / Loo Card Game",
+  "version": "0.4.0",
+  "description": "Backend MVP do Loo Card Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
