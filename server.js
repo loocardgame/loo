@@ -21,8 +21,11 @@ const pool = new Pool({
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-insecure-change-me";
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
 const SYSTEM_WALLET_ID = "00000000-0000-0000-0000-000000000002";
+
+/* ============================================================
+   AUXILIARES
+   ============================================================ */
 
 function publicUser(row) {
   if (!row) return null;
@@ -413,6 +416,10 @@ app.post("/api/admin/users/:userId/toggle-ban", authRequired, adminRequired, asy
   }
 });
 
+/* ============================================================
+   ADMIN — FICHAS
+   ============================================================ */
+
 app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req, res) => {
   const { userId, amount } = req.body;
 
@@ -499,6 +506,77 @@ app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req,
 });
 
 /* ============================================================
+   ADMIN — MESAS
+   ============================================================ */
+
+app.post("/api/admin/tables", authRequired, adminRequired, async (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({
+      ok: false,
+      message: "Informe o nome da mesa."
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const table = await client.query(
+      `
+      INSERT INTO public.game_tables (
+        owner_user_id,
+        name,
+        max_players,
+        initial_chips,
+        visibility,
+        status
+      )
+      VALUES ($1, $2, 6, 50, 'LINK_ONLY', 'WAITING')
+      RETURNING *;
+      `,
+      [req.auth.sub, name.trim()]
+    );
+
+    await client.query(
+      `
+      INSERT INTO public.table_members (
+        table_id,
+        user_id,
+        seat_number,
+        role,
+        status,
+        is_online,
+        is_ready
+      )
+      VALUES ($1, $2, 1, 'OWNER', 'WAITING', true, true);
+      `,
+      [table.rows[0].id, req.auth.sub]
+    );
+
+    await client.query("COMMIT");
+
+    res.json({
+      ok: true,
+      message: "Mesa criada.",
+      table: table.rows[0]
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    res.status(500).json({
+      ok: false,
+      message: "Erro ao criar mesa.",
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/* ============================================================
    HALL DO JOGADOR
    ============================================================ */
 
@@ -568,7 +646,7 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    const blocked = await client.query(
+    const userStatus = await client.query(
       `
       SELECT is_banned
       FROM public.app_users
@@ -578,7 +656,7 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
       [userId]
     );
 
-    if (blocked.rows[0]?.is_banned) {
+    if (userStatus.rows[0]?.is_banned) {
       throw new Error("Usuário bloqueado.");
     }
 
@@ -665,77 +743,6 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Erro ao entrar na mesa.",
-      error: error.message
-    });
-  } finally {
-    client.release();
-  }
-});
-
-/* ============================================================
-   ADMIN — MESAS SIMPLES
-   ============================================================ */
-
-app.post("/api/admin/tables", authRequired, adminRequired, async (req, res) => {
-  const { name } = req.body;
-
-  if (!name) {
-    return res.status(400).json({
-      ok: false,
-      message: "Informe o nome da mesa."
-    });
-  }
-
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const table = await client.query(
-      `
-      INSERT INTO public.game_tables (
-        owner_user_id,
-        name,
-        max_players,
-        initial_chips,
-        visibility,
-        status
-      )
-      VALUES ($1, $2, 6, 50, 'LINK_ONLY', 'WAITING')
-      RETURNING *;
-      `,
-      [req.auth.sub, name.trim()]
-    );
-
-    await client.query(
-      `
-      INSERT INTO public.table_members (
-        table_id,
-        user_id,
-        seat_number,
-        role,
-        status,
-        is_online,
-        is_ready
-      )
-      VALUES ($1, $2, 1, 'OWNER', 'WAITING', true, true);
-      `,
-      [table.rows[0].id, req.auth.sub]
-    );
-
-    await client.query("COMMIT");
-
-    res.json({
-      ok: true,
-      message: "Mesa criada.",
-      table: table.rows[0]
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao criar mesa.",
       error: error.message
     });
   } finally {
