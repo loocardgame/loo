@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Loo Card Game — MVP</title>
+
+  <style>
+    :root {
+      --bg: #07110c;
+      --panel: #101d16;
+      --panel2: #14271d;
+      --gold: #d5b56b;
+      --green: #0d5b2a;
+      --text: #f4f1e8;
+      --muted: #aeb7ad;
+      --danger: #ff6b6b;
+      --ok: #7ee787;
+      --border: rgba(213, 181, 107, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(213, 181, 107, 0.14), transparent 35%),
+        linear-gradient(135deg, #050806, var(--bg));
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    header h1 {
+      margin: 0;
+      letter-spacing: 1px;
+      color: var(--gold);
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      color: var(--gold);
+      font-size: 18px;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #07110c;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 11px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--gold);
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 13px;
+      margin: 8px 6px 0 0;
+      background: var(--gold);
+      color: #15120a;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button.secondary {
+      background: #254233;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+      max-height: 240px;
+      overflow: auto;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(213, 181, 107, 0.12);
+      color: var(--gold);
+      border: 1px solid var(--border);
+      margin: 2px;
+      font-size: 12px;
+    }
+
+    .list-item {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: rgba(0,0,0,0.18);
+    }
+
+    .list-item strong {
+      color: var(--gold);
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      padding: 8px;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--gold);
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>LOO CARD GAME</h1>
+    <p>MVP inicial com login simples, mesas, carteiras e fichas rastreáveis.</p>
+  </header>
+
+  <main>
+    <section>
+      <div class="card">
+        <h2>1. Cadastro</h2>
+
+        <label>Usuário</label>
+        <input id="registerUsername" placeholder="ex: eder" />
+
+        <label>Nome exibido</label>
+        <input id="registerDisplayName" placeholder="ex: Éder" />
+
+        <label>E-mail opcional</label>
+        <input id="registerEmail" placeholder="ex: email@exemplo.com" />
+
+        <label>Senha</label>
+        <input id="registerPassword" type="password" placeholder="mínimo 6 caracteres" />
+
+        <button onclick="registerUser()">Cadastrar</button>
+      </div>
+
+      <div class="card">
+        <h2>2. Login</h2>
+
+        <label>Usuário ou e-mail</label>
+        <input id="loginField" placeholder="username ou email" />
+
+        <label>Senha</label>
+        <input id="loginPassword" type="password" />
+
+        <button onclick="loginUser()">Entrar</button>
+        <button class="secondary" onclick="logout()">Sair</button>
+
+        <div style="margin-top: 12px;">
+          <span class="pill" id="loginStatus">Não logado</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>3. Mesa</h2>
+
+        <label>Nome da mesa</label>
+        <input id="tableName" placeholder="Mesa dos Amigos" />
+
+        <button onclick="createTable()">Criar mesa</button>
+        <button class="secondary" onclick="loadTables()">Atualizar mesas</button>
+        <button class="secondary" onclick="createDemo()">Criar demo</button>
+      </div>
+
+      <div class="card">
+        <h2>Status</h2>
+        <div id="statusBox" class="status">Aguardando ação...</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="grid">
+        <div class="card">
+          <h2>Usuário atual</h2>
+          <div id="currentUserBox" class="status">Nenhum usuário logado.</div>
+          <button class="secondary" onclick="loadMe()">Atualizar usuário</button>
+          <button class="secondary" onclick="loadMyWallets()">Minhas carteiras</button>
+        </div>
+
+        <div class="card">
+          <h2>Carteiras</h2>
+          <div id="walletsBox" class="status">Sem dados.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Mesas</h2>
+        <div id="tablesBox">Clique em “Atualizar mesas”.</div>
+      </div>
+
+      <div class="card">
+        <h2>Membros da mesa selecionada</h2>
+        <div id="membersBox">Nenhuma mesa selecionada.</div>
+      </div>
+
+      <div class="card">
+        <h2>Rastreio de fichas</h2>
+        <button class="secondary" onclick="loadChipTrace()">Atualizar rastreio</button>
+        <div id="chipsBox" class="status" style="margin-top: 10px;">Sem dados.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API = window.location.origin;
+
+    let token = localStorage.getItem("loo_token") || "";
+    let currentUser = JSON.parse(localStorage.getItem("loo_user") || "null");
+    let selectedTableId = localStorage.getItem("loo_selected_table") || "";
+
+    function setStatus(message, data) {
+      const box = document.getElementById("statusBox");
+      box.textContent = message + (data ? "\n\n" + JSON.stringify(data, null, 2) : "");
+    }
+
+    function saveAuth(newToken, user) {
+      token = newToken;
+      currentUser = user;
+
+      localStorage.setItem("loo_token", token);
+      localStorage.setItem("loo_user", JSON.stringify(user));
+
+      updateLoginStatus();
+      renderCurrentUser();
+    }
+
+    function logout() {
+      token = "";
+      currentUser = null;
+
+      localStorage.removeItem("loo_token");
+      localStorage.removeItem("loo_user");
+
+      updateLoginStatus();
+      renderCurrentUser();
+      setStatus("Logout realizado.");
+    }
+
+    function updateLoginStatus() {
+      const el = document.getElementById("loginStatus");
+
+      if (currentUser) {
+        el.textContent = "Logado: " + currentUser.displayName;
+      } else {
+        el.textContent = "Não logado";
+      }
+    }
+
+    function renderCurrentUser() {
+      const box = document.getElementById("currentUserBox");
+
+      if (!currentUser) {
+        box.textContent = "Nenhum usuário logado.";
+        return;
+      }
+
+      box.textContent = JSON.stringify(currentUser, null, 2);
+    }
+
+    async function api(path, options = {}) {
+      const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      };
+
+      if (token) {
+        headers.Authorization = "Bearer " + token;
+      }
+
+      const res = await fetch(API + path, {
+        ...options,
+        headers
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || data.error || "Erro na requisição.");
+      }
+
+      return data;
+    }
+
+    async function registerUser() {
+      try {
+        const data = await api("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("registerUsername").value,
+            displayName: document.getElementById("registerDisplayName").value,
+            email: document.getElementById("registerEmail").value,
+            password: document.getElementById("registerPassword").value,
+            avatarEmoji: "🃏"
+          })
+        });
+
+        saveAuth(data.token, data.user);
+        setStatus("Usuário cadastrado.", data);
+        await loadMyWallets();
+      } catch (error) {
+        setStatus("Erro no cadastro: " + error.message);
+      }
+    }
+
+    async function loginUser() {
+      try {
+        const data = await api("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            login: document.getElementById("loginField").value,
+            password: document.getElementById("loginPassword").value
+          })
+        });
+
+        saveAuth(data.token, data.user);
+        setStatus("Login realizado.", data);
+        await loadMyWallets();
+      } catch (error) {
+        setStatus("Erro no login: " + error.message);
+      }
+    }
+
+    async function loadMe() {
+      try {
+        const data = await api("/api/me");
+        currentUser = data.user;
+        localStorage.setItem("loo_user", JSON.stringify(currentUser));
+
+        updateLoginStatus();
+        renderCurrentUser();
+        setStatus("Usuário carregado.", data);
+      } catch (error) {
+        setStatus("Erro ao carregar usuário: " + error.message);
+      }
+    }
+
+    async function loadMyWallets() {
+      try {
+        const data = await api("/api/wallets/me");
+
+        document.getElementById("walletsBox").textContent = JSON.stringify(data.wallets, null, 2);
+        setStatus("Carteiras carregadas.", { total: data.total });
+      } catch (error) {
+        setStatus("Erro ao carregar carteiras: " + error.message);
+      }
+    }
+
+    async function createTable() {
+      try {
+        const data = await api("/api/tables", {
+          method: "POST",
+          body: JSON.stringify({
+            name: document.getElementById("tableName").value || "Mesa dos Amigos",
+            maxPlayers: 6,
+            initialChips: 50
+          })
+        });
+
+        selectedTableId = data.table.id;
+        localStorage.setItem("loo_selected_table", selectedTableId);
+
+        setStatus("Mesa criada.", data);
+        await loadTables();
+        await loadMembers(selectedTableId);
+        await loadMyWallets();
+      } catch (error) {
+        setStatus("Erro ao criar mesa: " + error.message);
+      }
+    }
+
+    async function loadTables() {
+      try {
+        const data = await api("/api/tables");
+
+        const box = document.getElementById("tablesBox");
+
+        if (!data.tables.length) {
+          box.innerHTML = "<div class='small'>Nenhuma mesa criada.</div>";
+          return;
+        }
+
+        box.innerHTML = data.tables.map(table => `
+          <div class="list-item">
+            <strong>${table.name}</strong>
+            <div class="small">ID: ${table.id}</div>
+            <div class="small">Dono: ${table.owner_name || "-"}</div>
+            <div class="small">Status: ${table.status} | Jogadores: ${table.members_count}</div>
+            <div class="small">Convite: ${table.invite_code}</div>
+            <button onclick="selectTable('${table.id}')">Selecionar</button>
+            <button class="secondary" onclick="joinTable('${table.id}')">Entrar</button>
+            <button class="secondary" onclick="loadMembers('${table.id}')">Ver membros</button>
+          </div>
+        `).join("");
+
+        setStatus("Mesas carregadas.", { total: data.total });
+      } catch (error) {
+        setStatus("Erro ao carregar mesas: " + error.message);
+      }
+    }
+
+    function selectTable(tableId) {
+      selectedTableId = tableId;
+      localStorage.setItem("loo_selected_table", selectedTableId);
+      setStatus("Mesa selecionada: " + tableId);
+      loadMembers(tableId);
+    }
+
+    async function joinTable(tableId) {
+      try {
+        const data = await api("/api/tables/" + tableId + "/join", {
+          method: "POST",
+          body: JSON.stringify({})
+        });
+
+        selectedTableId = tableId;
+        localStorage.setItem("loo_selected_table", selectedTableId);
+
+        setStatus("Entrada na mesa realizada.", data);
+        await loadMembers(tableId);
+        await loadMyWallets();
+      } catch (error) {
+        setStatus("Erro ao entrar na mesa: " + error.message);
+      }
+    }
+
+    async function loadMembers(tableId) {
+      try {
+        selectedTableId = tableId;
+        localStorage.setItem("loo_selected_table", selectedTableId);
+
+        const data = await api("/api/tables/" + tableId + "/members");
+
+        const box = document.getElementById("membersBox");
+
+        if (!data.members.length) {
+          box.innerHTML = "<div class='small'>Nenhum membro na mesa.</div>";
+          return;
+        }
+
+        box.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Assento</th>
+                <th>Jogador</th>
+                <th>Status</th>
+                <th>Saldo</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.members.map(m => `
+                <tr>
+                  <td>${m.seat_number || "-"}</td>
+                  <td>${m.avatar_emoji || "🃏"} ${m.display_name}</td>
+                  <td>${m.member_status}</td>
+                  <td>${m.balance || 0}</td>
+                  <td>
+                    ${m.wallet_id ? `<button onclick="addChips('${m.wallet_id}')">+50</button>` : "-"}
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+
+        setStatus("Membros carregados.", { total: data.total, tableId });
+      } catch (error) {
+        setStatus("Erro ao carregar membros: " + error.message);
+      }
+    }
+
+    async function addChips(walletId) {
+      try {
+        const data = await api("/api/chips/add", {
+          method: "POST",
+          body: JSON.stringify({
+            toWalletId: walletId,
+            amount: 50,
+            description: "Adição manual pelo painel MVP."
+          })
+        });
+
+        setStatus("Fichas adicionadas.", data);
+
+        if (selectedTableId) {
+          await loadMembers(selectedTableId);
+        }
+
+        await loadChipTrace();
+      } catch (error) {
+        setStatus("Erro ao adicionar fichas: " + error.message);
+      }
+    }
+
+    async function loadChipTrace() {
+      try {
+        const data = await api("/api/chips/trace");
+
+        document.getElementById("chipsBox").textContent = JSON.stringify(data.transactions, null, 2);
+        setStatus("Rastreio de fichas carregado.", { total: data.total });
+      } catch (error) {
+        setStatus("Erro ao carregar rastreio: " + error.message);
+      }
+    }
+
+    async function createDemo() {
+      try {
+        const data = await api("/api/demo/create");
+
+        setStatus("Demo criada. Senha dos usuários demo: 123456", data);
+
+        selectedTableId = data.table.id;
+        localStorage.setItem("loo_selected_table", selectedTableId);
+
+        await loadTables();
+        await loadMembers(selectedTableId);
+        await loadChipTrace();
+      } catch (error) {
+        setStatus("Erro ao criar demo: " + error.message);
+      }
+    }
+
+    updateLoginStatus();
+    renderCurrentUser();
+    loadTables().catch(() => {});
+  </script>
+</body>
+</html>
