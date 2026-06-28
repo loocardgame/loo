@@ -265,7 +265,7 @@ app.get("/api/me", authRequired, async (req, res) => {
 });
 
 /* ============================================================
-   ADMIN — USUÁRIOS
+   ADMIN — LISTAR USUÁRIOS
    ============================================================ */
 
 app.get("/api/admin/users", authRequired, adminRequired, async (req, res) => {
@@ -310,6 +310,10 @@ app.get("/api/admin/users", authRequired, adminRequired, async (req, res) => {
   }
 });
 
+/* ============================================================
+   ADMIN — CRIAR USUÁRIO SIMPLES
+   ============================================================ */
+
 app.post("/api/admin/users", authRequired, adminRequired, async (req, res) => {
   const { username, password } = req.body;
 
@@ -320,7 +324,9 @@ app.post("/api/admin/users", authRequired, adminRequired, async (req, res) => {
     });
   }
 
-  if (String(username).trim().length < 3) {
+  const nick = String(username).trim().toLowerCase();
+
+  if (nick.length < 3) {
     return res.status(400).json({
       ok: false,
       message: "O nick precisa ter pelo menos 3 caracteres."
@@ -336,7 +342,6 @@ app.post("/api/admin/users", authRequired, adminRequired, async (req, res) => {
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
-    const nick = username.trim();
 
     const result = await pool.query(
       `
@@ -386,6 +391,10 @@ app.post("/api/admin/users", authRequired, adminRequired, async (req, res) => {
   }
 });
 
+/* ============================================================
+   ADMIN — BLOQUEAR / DESBLOQUEAR USUÁRIO
+   ============================================================ */
+
 app.post("/api/admin/users/:userId/toggle-ban", authRequired, adminRequired, async (req, res) => {
   const { userId } = req.params;
   const { blocked } = req.body;
@@ -402,6 +411,13 @@ app.post("/api/admin/users/:userId/toggle-ban", authRequired, adminRequired, asy
       [userId, Boolean(blocked)]
     );
 
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        ok: false,
+        message: "Usuário não encontrado."
+      });
+    }
+
     res.json({
       ok: true,
       message: Boolean(blocked) ? "Usuário bloqueado." : "Usuário desbloqueado.",
@@ -417,16 +433,25 @@ app.post("/api/admin/users/:userId/toggle-ban", authRequired, adminRequired, asy
 });
 
 /* ============================================================
-   ADMIN — FICHAS
+   ADMIN — ADICIONAR / RETIRAR / SANGRIA DE FICHAS
    ============================================================ */
 
-app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req, res) => {
-  const { userId, amount } = req.body;
+app.post("/api/admin/chips/adjust-global", authRequired, adminRequired, async (req, res) => {
+  const { userId, amount, mode } = req.body;
 
-  if (!userId || !amount || Number(amount) <= 0) {
+  const numericAmount = Number(amount);
+
+  if (!userId || !numericAmount || numericAmount <= 0) {
     return res.status(400).json({
       ok: false,
       message: "Informe usuário e quantidade válida."
+    });
+  }
+
+  if (!["ADD", "REMOVE"].includes(mode)) {
+    return res.status(400).json({
+      ok: false,
+      message: "Modo inválido. Use ADD ou REMOVE."
     });
   }
 
@@ -437,7 +462,7 @@ app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req,
 
     const walletResult = await client.query(
       `
-      SELECT id
+      SELECT id, balance
       FROM public.wallets
       WHERE user_id = $1
         AND wallet_type = 'USER_GLOBAL'
@@ -447,9 +472,24 @@ app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req,
       [userId]
     );
 
-    if (!walletResult.rows[0]) {
+    const userWallet = walletResult.rows[0];
+
+    if (!userWallet) {
       throw new Error("Carteira global do usuário não encontrada.");
     }
+
+    if (mode === "REMOVE" && Number(userWallet.balance) < numericAmount) {
+      throw new Error("Saldo insuficiente para retirada/sangria.");
+    }
+
+    const transactionType = mode === "ADD" ? "ADMIN_ADD" : "ADMIN_REMOVE";
+    const fromWalletId = mode === "ADD" ? SYSTEM_WALLET_ID : userWallet.id;
+    const toWalletId = mode === "ADD" ? userWallet.id : SYSTEM_WALLET_ID;
+
+    const description =
+      mode === "ADD"
+        ? "Crédito administrativo na carteira global."
+        : "Retirada/Sangria administrativa da carteira global.";
 
     const tx = await client.query(
       `
@@ -465,23 +505,25 @@ app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req,
         description
       )
       VALUES (
-        'ADMIN_ADD',
         $1,
         $2,
         $3,
+        $4,
         'COMPLETED',
-        $4,
-        $4,
-        $4,
-        'Crédito administrativo na carteira global.'
+        $5,
+        $5,
+        $5,
+        $6
       )
       RETURNING *;
       `,
       [
-        SYSTEM_WALLET_ID,
-        walletResult.rows[0].id,
-        Number(amount),
-        req.auth.sub
+        transactionType,
+        fromWalletId,
+        toWalletId,
+        numericAmount,
+        req.auth.sub,
+        description
       ]
     );
 
@@ -489,7 +531,10 @@ app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req,
 
     res.json({
       ok: true,
-      message: "Fichas adicionadas com sucesso.",
+      message:
+        mode === "ADD"
+          ? "Fichas adicionadas com sucesso."
+          : "Fichas retiradas com sucesso.",
       transaction: tx.rows[0]
     });
   } catch (error) {
@@ -497,78 +542,7 @@ app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req,
 
     res.status(500).json({
       ok: false,
-      message: "Erro ao adicionar fichas.",
-      error: error.message
-    });
-  } finally {
-    client.release();
-  }
-});
-
-/* ============================================================
-   ADMIN — MESAS
-   ============================================================ */
-
-app.post("/api/admin/tables", authRequired, adminRequired, async (req, res) => {
-  const { name } = req.body;
-
-  if (!name) {
-    return res.status(400).json({
-      ok: false,
-      message: "Informe o nome da mesa."
-    });
-  }
-
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const table = await client.query(
-      `
-      INSERT INTO public.game_tables (
-        owner_user_id,
-        name,
-        max_players,
-        initial_chips,
-        visibility,
-        status
-      )
-      VALUES ($1, $2, 6, 50, 'LINK_ONLY', 'WAITING')
-      RETURNING *;
-      `,
-      [req.auth.sub, name.trim()]
-    );
-
-    await client.query(
-      `
-      INSERT INTO public.table_members (
-        table_id,
-        user_id,
-        seat_number,
-        role,
-        status,
-        is_online,
-        is_ready
-      )
-      VALUES ($1, $2, 1, 'OWNER', 'WAITING', true, true);
-      `,
-      [table.rows[0].id, req.auth.sub]
-    );
-
-    await client.query("COMMIT");
-
-    res.json({
-      ok: true,
-      message: "Mesa criada.",
-      table: table.rows[0]
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao criar mesa.",
+      message: "Erro ao ajustar fichas.",
       error: error.message
     });
   } finally {
