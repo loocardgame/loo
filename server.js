@@ -11,11 +11,6 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-/*
-  Serve o frontend simples que ficará em:
-  public/index.html
-*/
 app.use(express.static(path.join(__dirname, "public")));
 
 const pool = new Pool({
@@ -29,10 +24,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-insecure-change-me";
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
 const SYSTEM_WALLET_ID = "00000000-0000-0000-0000-000000000002";
 
-/* ============================================================
-   FUNÇÕES AUXILIARES
-   ============================================================ */
-
 function publicUser(row) {
   if (!row) return null;
 
@@ -42,9 +33,6 @@ function publicUser(row) {
     displayName: row.display_name,
     email: row.email,
     avatarType: row.avatar_type,
-    avatarUrl: row.avatar_url,
-    avatarKey: row.avatar_key,
-    avatarColor: row.avatar_color,
     avatarEmoji: row.avatar_emoji,
     role: row.role,
     isGuest: row.is_guest,
@@ -62,9 +50,7 @@ function signToken(user) {
       role: user.role
     },
     JWT_SECRET,
-    {
-      expiresIn: "7d"
-    }
+    { expiresIn: "7d" }
   );
 }
 
@@ -90,53 +76,26 @@ function authRequired(req, res, next) {
   }
 }
 
-async function getTableWallet(client, tableId, userId) {
-  const result = await client.query(
-    `
-    SELECT *
-    FROM public.wallets
-    WHERE wallet_type = 'USER_TABLE'
-      AND table_id = $1
-      AND user_id = $2
-      AND currency_code = 'TEST_CHIP'
-    LIMIT 1;
-    `,
-    [tableId, userId]
-  );
+function adminRequired(req, res, next) {
+  if (!req.auth || !["SYSTEM_ADMIN", "TABLE_ADMIN"].includes(req.auth.role)) {
+    return res.status(403).json({
+      ok: false,
+      message: "Acesso restrito a administradores."
+    });
+  }
 
-  return result.rows[0] || null;
-}
-
-async function getMemberWithWallet(client, memberId) {
-  const result = await client.query(
-    `
-    SELECT
-      tm.*,
-      w.id AS wallet_id,
-      w.balance AS wallet_balance,
-      w.currency_code AS wallet_currency_code
-    FROM public.table_members tm
-    LEFT JOIN public.wallets w
-      ON w.id = tm.table_wallet_id
-    WHERE tm.id = $1
-    LIMIT 1;
-    `,
-    [memberId]
-  );
-
-  return result.rows[0] || null;
+  return next();
 }
 
 /* ============================================================
-   ROTAS BÁSICAS
+   BASE
    ============================================================ */
 
 app.get("/api", (req, res) => {
   res.json({
-    status: "online",
-    app: "Lu Online / Loo Card Game",
-    message: "Backend funcionando no Render",
-    databaseConfigured: Boolean(process.env.DATABASE_URL)
+    ok: true,
+    app: "Loo Card Game",
+    status: "online"
   });
 });
 
@@ -152,9 +111,7 @@ app.get("/health", (req, res) => {
 app.get("/db-test", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT
-        now() AS server_time,
-        COUNT(*)::int AS total_users
+      SELECT now() AS server_time, COUNT(*)::int AS total_users
       FROM public.app_users;
     `);
 
@@ -164,8 +121,6 @@ app.get("/db-test", async (req, res) => {
       data: result.rows[0]
     });
   } catch (error) {
-    console.error("Erro no teste do banco:", error);
-
     res.status(500).json({
       ok: false,
       message: "Erro ao conectar no banco",
@@ -174,135 +129,9 @@ app.get("/db-test", async (req, res) => {
   }
 });
 
-app.get("/tables-test", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT
-        table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-      ORDER BY table_name;
-    `);
-
-    res.json({
-      ok: true,
-      message: "Tabelas encontradas no banco",
-      total: result.rows.length,
-      tables: result.rows
-    });
-  } catch (error) {
-    console.error("Erro ao listar tabelas:", error);
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao listar tabelas",
-      error: error.message
-    });
-  }
-});
-
 /* ============================================================
-   AUTENTICAÇÃO SIMPLES
+   LOGIN
    ============================================================ */
-
-app.post("/api/auth/register", async (req, res) => {
-  const {
-    username,
-    displayName,
-    email,
-    password,
-    avatarEmoji
-  } = req.body;
-
-  if (!username || !displayName || !password) {
-    return res.status(400).json({
-      ok: false,
-      message: "Informe username, displayName e password."
-    });
-  }
-
-  if (String(username).trim().length < 3) {
-    return res.status(400).json({
-      ok: false,
-      message: "O nome de usuário precisa ter pelo menos 3 caracteres."
-    });
-  }
-
-  if (String(password).length < 6) {
-    return res.status(400).json({
-      ok: false,
-      message: "A senha precisa ter pelo menos 6 caracteres."
-    });
-  }
-
-  try {
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `
-      INSERT INTO public.app_users (
-        username,
-        display_name,
-        email,
-        password_hash,
-        login_provider,
-        avatar_type,
-        avatar_emoji,
-        is_guest,
-        metadata
-      )
-      VALUES ($1, $2, $3, $4, 'EMAIL', 'EMOJI', $5, false, '{}'::jsonb)
-      RETURNING
-        id,
-        username,
-        display_name,
-        email,
-        avatar_type,
-        avatar_url,
-        avatar_key,
-        avatar_color,
-        avatar_emoji,
-        role,
-        is_guest,
-        is_active,
-        is_banned,
-        created_at;
-      `,
-      [
-        username.trim(),
-        displayName.trim(),
-        email || null,
-        passwordHash,
-        avatarEmoji || "🃏"
-      ]
-    );
-
-    const user = result.rows[0];
-    const token = signToken(user);
-
-    res.json({
-      ok: true,
-      message: "Usuário cadastrado com sucesso.",
-      token,
-      user: publicUser(user)
-    });
-  } catch (error) {
-    console.error("Erro ao cadastrar usuário:", error);
-
-    if (error.code === "23505") {
-      return res.status(409).json({
-        ok: false,
-        message: "Usuário ou e-mail já cadastrado."
-      });
-    }
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao cadastrar usuário.",
-      error: error.message
-    });
-  }
-});
 
 app.post("/api/auth/login", async (req, res) => {
   const { login, password } = req.body;
@@ -310,7 +139,7 @@ app.post("/api/auth/login", async (req, res) => {
   if (!login || !password) {
     return res.status(400).json({
       ok: false,
-      message: "Informe login e password."
+      message: "Informe usuário e senha."
     });
   }
 
@@ -324,9 +153,6 @@ app.post("/api/auth/login", async (req, res) => {
         email,
         password_hash,
         avatar_type,
-        avatar_url,
-        avatar_key,
-        avatar_color,
         avatar_emoji,
         role,
         is_guest,
@@ -353,7 +179,7 @@ app.post("/api/auth/login", async (req, res) => {
     if (!user.is_active || user.is_banned) {
       return res.status(403).json({
         ok: false,
-        message: "Usuário inativo ou bloqueado."
+        message: "Usuário bloqueado ou inativo."
       });
     }
 
@@ -369,9 +195,7 @@ app.post("/api/auth/login", async (req, res) => {
     await pool.query(
       `
       UPDATE public.app_users
-      SET
-        last_login_at = now(),
-        last_seen_at = now()
+      SET last_login_at = now(), last_seen_at = now()
       WHERE id = $1;
       `,
       [user.id]
@@ -386,8 +210,6 @@ app.post("/api/auth/login", async (req, res) => {
       user: publicUser(user)
     });
   } catch (error) {
-    console.error("Erro no login:", error);
-
     res.status(500).json({
       ok: false,
       message: "Erro ao fazer login.",
@@ -406,9 +228,6 @@ app.get("/api/me", authRequired, async (req, res) => {
         display_name,
         email,
         avatar_type,
-        avatar_url,
-        avatar_key,
-        avatar_color,
         avatar_emoji,
         role,
         is_guest,
@@ -421,6 +240,13 @@ app.get("/api/me", authRequired, async (req, res) => {
       `,
       [req.auth.sub]
     );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        ok: false,
+        message: "Usuário não encontrado."
+      });
+    }
 
     res.json({
       ok: true,
@@ -436,28 +262,35 @@ app.get("/api/me", authRequired, async (req, res) => {
 });
 
 /* ============================================================
-   USUÁRIOS
+   ADMIN — USUÁRIOS
    ============================================================ */
 
-app.get("/api/users", async (req, res) => {
+app.get("/api/admin/users", authRequired, adminRequired, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        id,
-        username,
-        display_name,
-        email,
-        avatar_type,
-        avatar_url,
-        avatar_key,
-        avatar_color,
-        avatar_emoji,
-        is_guest,
-        is_active,
-        is_banned,
-        created_at
-      FROM public.app_users
-      ORDER BY created_at DESC;
+        u.id,
+        u.username,
+        u.display_name,
+        u.role,
+        u.is_active,
+        u.is_banned,
+        u.created_at,
+        COALESCE(w.balance, 0)::numeric(18,2) AS global_balance,
+        w.id AS global_wallet_id,
+        (
+          SELECT COUNT(*)::int
+          FROM public.table_members tm
+          WHERE tm.user_id = u.id
+            AND tm.status = 'BLOCKED'
+        ) AS blocked_tables_count
+      FROM public.app_users u
+      LEFT JOIN public.wallets w
+        ON w.user_id = u.id
+       AND w.wallet_type = 'USER_GLOBAL'
+       AND w.currency_code = 'TEST_CHIP'
+      WHERE u.login_provider <> 'SYSTEM'
+      ORDER BY u.created_at DESC;
     `);
 
     res.json({
@@ -466,8 +299,6 @@ app.get("/api/users", async (req, res) => {
       users: result.rows
     });
   } catch (error) {
-    console.error("Erro ao listar usuários:", error);
-
     res.status(500).json({
       ok: false,
       message: "Erro ao listar usuários.",
@@ -476,149 +307,190 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-/* ============================================================
-   CARTEIRAS
-   ============================================================ */
+app.post("/api/admin/users", authRequired, adminRequired, async (req, res) => {
+  const { username, password } = req.body;
 
-app.get("/api/wallets/me", authRequired, async (req, res) => {
+  if (!username || !password) {
+    return res.status(400).json({
+      ok: false,
+      message: "Informe nick e senha."
+    });
+  }
+
+  if (String(username).trim().length < 3) {
+    return res.status(400).json({
+      ok: false,
+      message: "O nick precisa ter pelo menos 3 caracteres."
+    });
+  }
+
+  if (String(password).length < 6) {
+    return res.status(400).json({
+      ok: false,
+      message: "A senha precisa ter pelo menos 6 caracteres."
+    });
+  }
+
   try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const nick = username.trim();
+
     const result = await pool.query(
       `
-      SELECT
-        w.*,
-        gt.name AS table_name
-      FROM public.wallets w
-      LEFT JOIN public.game_tables gt
-        ON gt.id = w.table_id
-      WHERE w.user_id = $1
-      ORDER BY w.created_at DESC;
+      INSERT INTO public.app_users (
+        username,
+        display_name,
+        password_hash,
+        login_provider,
+        avatar_type,
+        avatar_emoji,
+        role,
+        is_guest,
+        is_active,
+        is_banned
+      )
+      VALUES ($1, $1, $2, 'EMAIL', 'EMOJI', '🃏', 'PLAYER', false, true, false)
+      RETURNING
+        id,
+        username,
+        display_name,
+        role,
+        is_active,
+        is_banned,
+        created_at;
       `,
-      [req.auth.sub]
+      [nick, passwordHash]
     );
 
     res.json({
       ok: true,
-      total: result.rows.length,
-      wallets: result.rows
+      message: "Usuário criado com sucesso.",
+      user: result.rows[0]
     });
   } catch (error) {
+    if (error.code === "23505") {
+      return res.status(409).json({
+        ok: false,
+        message: "Esse nick já existe."
+      });
+    }
+
     res.status(500).json({
       ok: false,
-      message: "Erro ao listar carteiras.",
+      message: "Erro ao criar usuário.",
       error: error.message
     });
   }
 });
 
-/* ============================================================
-   MESAS
-   ============================================================ */
+app.post("/api/admin/users/:userId/toggle-ban", authRequired, adminRequired, async (req, res) => {
+  const { userId } = req.params;
+  const { blocked } = req.body;
 
-app.post("/api/tables", authRequired, async (req, res) => {
-  const {
-    name,
-    description,
-    maxPlayers,
-    initialChips
-  } = req.body;
+  try {
+    const result = await pool.query(
+      `
+      UPDATE public.app_users
+      SET is_banned = $2
+      WHERE id = $1
+        AND login_provider <> 'SYSTEM'
+      RETURNING id, username, display_name, role, is_banned;
+      `,
+      [userId, Boolean(blocked)]
+    );
 
-  if (!name) {
+    res.json({
+      ok: true,
+      message: Boolean(blocked) ? "Usuário bloqueado." : "Usuário desbloqueado.",
+      user: result.rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: "Erro ao atualizar bloqueio.",
+      error: error.message
+    });
+  }
+});
+
+app.post("/api/admin/chips/add-global", authRequired, adminRequired, async (req, res) => {
+  const { userId, amount } = req.body;
+
+  if (!userId || !amount || Number(amount) <= 0) {
     return res.status(400).json({
       ok: false,
-      message: "Informe o nome da mesa."
+      message: "Informe usuário e quantidade válida."
     });
   }
 
-  const ownerUserId = req.auth.sub;
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    const tableResult = await client.query(
+    const walletResult = await client.query(
       `
-      INSERT INTO public.game_tables (
-        owner_user_id,
-        name,
-        description,
-        max_players,
-        initial_chips,
-        visibility,
-        status
+      SELECT id
+      FROM public.wallets
+      WHERE user_id = $1
+        AND wallet_type = 'USER_GLOBAL'
+        AND currency_code = 'TEST_CHIP'
+      LIMIT 1;
+      `,
+      [userId]
+    );
+
+    if (!walletResult.rows[0]) {
+      throw new Error("Carteira global do usuário não encontrada.");
+    }
+
+    const tx = await client.query(
+      `
+      INSERT INTO public.chip_transactions (
+        transaction_type,
+        from_wallet_id,
+        to_wallet_id,
+        amount,
+        status,
+        requested_by_user_id,
+        approved_by_user_id,
+        created_by_user_id,
+        description
       )
-      VALUES ($1, $2, $3, $4, $5, 'LINK_ONLY', 'WAITING')
+      VALUES (
+        'ADMIN_ADD',
+        $1,
+        $2,
+        $3,
+        'COMPLETED',
+        $4,
+        $4,
+        $4,
+        'Crédito administrativo na carteira global.'
+      )
       RETURNING *;
       `,
       [
-        ownerUserId,
-        name.trim(),
-        description || null,
-        maxPlayers || 6,
-        initialChips || 50
+        SYSTEM_WALLET_ID,
+        walletResult.rows[0].id,
+        Number(amount),
+        req.auth.sub
       ]
-    );
-
-    const table = tableResult.rows[0];
-
-    const memberResult = await client.query(
-      `
-      INSERT INTO public.table_members (
-        table_id,
-        user_id,
-        seat_number,
-        role,
-        status,
-        is_online,
-        is_ready
-      )
-      VALUES ($1, $2, 1, 'OWNER', 'WAITING', true, true)
-      RETURNING *;
-      `,
-      [table.id, ownerUserId]
-    );
-
-    const ownerMember = await getMemberWithWallet(client, memberResult.rows[0].id);
-
-    await client.query(
-      `
-      INSERT INTO public.hand_events (
-        table_id,
-        actor_user_id,
-        event_type,
-        action_type,
-        public_message,
-        is_public_log,
-        payload
-      )
-      VALUES (
-        $1,
-        $2,
-        'TABLE_CREATED',
-        'CRIAR_MESA',
-        'Mesa criada.',
-        true,
-        jsonb_build_object('table_name', $3)
-      );
-      `,
-      [table.id, ownerUserId, table.name]
     );
 
     await client.query("COMMIT");
 
     res.json({
       ok: true,
-      message: "Mesa criada com sucesso.",
-      table,
-      ownerMember
+      message: "Fichas adicionadas com sucesso.",
+      transaction: tx.rows[0]
     });
   } catch (error) {
     await client.query("ROLLBACK");
 
-    console.error("Erro ao criar mesa:", error);
-
     res.status(500).json({
       ok: false,
-      message: "Erro ao criar mesa.",
+      message: "Erro ao adicionar fichas.",
       error: error.message
     });
   } finally {
@@ -626,22 +498,40 @@ app.post("/api/tables", authRequired, async (req, res) => {
   }
 });
 
-app.get("/api/tables", async (req, res) => {
+/* ============================================================
+   HALL DO JOGADOR
+   ============================================================ */
+
+app.get("/api/hall", authRequired, async (req, res) => {
   try {
-    const result = await pool.query(`
+    const userResult = await pool.query(
+      `
+      SELECT
+        u.id,
+        u.username,
+        u.display_name,
+        u.role,
+        COALESCE(w.balance, 0)::numeric(18,2) AS global_balance,
+        w.id AS global_wallet_id
+      FROM public.app_users u
+      LEFT JOIN public.wallets w
+        ON w.user_id = u.id
+       AND w.wallet_type = 'USER_GLOBAL'
+       AND w.currency_code = 'TEST_CHIP'
+      WHERE u.id = $1
+      LIMIT 1;
+      `,
+      [req.auth.sub]
+    );
+
+    const tablesResult = await pool.query(`
       SELECT
         gt.id,
         gt.name,
-        gt.description,
-        gt.table_code,
         gt.invite_code,
-        gt.visibility,
         gt.status,
-        gt.min_players,
         gt.max_players,
-        gt.initial_chips,
         gt.created_at,
-        gt.owner_user_id,
         au.display_name AS owner_name,
         COUNT(tm.id)::int AS members_count
       FROM public.game_tables gt
@@ -650,23 +540,20 @@ app.get("/api/tables", async (req, res) => {
       LEFT JOIN public.table_members tm
         ON tm.table_id = gt.id
        AND tm.status <> 'LEFT'
-      GROUP BY
-        gt.id,
-        au.display_name
+      WHERE gt.status IN ('WAITING', 'ACTIVE')
+      GROUP BY gt.id, au.display_name
       ORDER BY gt.created_at DESC;
     `);
 
     res.json({
       ok: true,
-      total: result.rows.length,
-      tables: result.rows
+      user: userResult.rows[0],
+      tables: tablesResult.rows
     });
   } catch (error) {
-    console.error("Erro ao listar mesas:", error);
-
     res.status(500).json({
       ok: false,
-      message: "Erro ao listar mesas.",
+      message: "Erro ao carregar hall.",
       error: error.message
     });
   }
@@ -674,13 +561,26 @@ app.get("/api/tables", async (req, res) => {
 
 app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
   const { tableId } = req.params;
-  const { seatNumber } = req.body;
-
   const userId = req.auth.sub;
+
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
+
+    const blocked = await client.query(
+      `
+      SELECT is_banned
+      FROM public.app_users
+      WHERE id = $1
+      LIMIT 1;
+      `,
+      [userId]
+    );
+
+    if (blocked.rows[0]?.is_banned) {
+      throw new Error("Usuário bloqueado.");
+    }
 
     const existing = await client.query(
       `
@@ -698,28 +598,22 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
 
       return res.json({
         ok: true,
-        message: "Jogador já estava na mesa.",
+        message: "Usuário já está nessa mesa.",
         member: existing.rows[0]
       });
     }
 
-    let finalSeatNumber = seatNumber || null;
+    const seatResult = await client.query(
+      `
+      SELECT COALESCE(MAX(seat_number), 0) + 1 AS next_seat
+      FROM public.table_members
+      WHERE table_id = $1
+        AND seat_number IS NOT NULL;
+      `,
+      [tableId]
+    );
 
-    if (!finalSeatNumber) {
-      const seatResult = await client.query(
-        `
-        SELECT COALESCE(MAX(seat_number), 0) + 1 AS next_seat
-        FROM public.table_members
-        WHERE table_id = $1
-          AND seat_number IS NOT NULL;
-        `,
-        [tableId]
-      );
-
-      finalSeatNumber = seatResult.rows[0].next_seat;
-    }
-
-    const memberResult = await client.query(
+    const member = await client.query(
       `
       INSERT INTO public.table_members (
         table_id,
@@ -733,10 +627,8 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
       VALUES ($1, $2, $3, 'PLAYER', 'WAITING', true, false)
       RETURNING *;
       `,
-      [tableId, userId, finalSeatNumber]
+      [tableId, userId, seatResult.rows[0].next_seat]
     );
-
-    const member = await getMemberWithWallet(client, memberResult.rows[0].id);
 
     await client.query(
       `
@@ -746,8 +638,7 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
         event_type,
         action_type,
         public_message,
-        is_public_log,
-        payload
+        is_public_log
       )
       VALUES (
         $1,
@@ -755,8 +646,7 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
         'PLAYER_JOINED',
         'ENTRAR_MESA',
         'Jogador entrou na mesa.',
-        true,
-        '{}'::jsonb
+        true
       );
       `,
       [tableId, userId]
@@ -766,13 +656,11 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
 
     res.json({
       ok: true,
-      message: "Jogador entrou na mesa.",
-      member
+      message: "Entrada na mesa realizada.",
+      member: member.rows[0]
     });
   } catch (error) {
     await client.query("ROLLBACK");
-
-    console.error("Erro ao entrar na mesa:", error);
 
     res.status(500).json({
       ok: false,
@@ -784,118 +672,17 @@ app.post("/api/tables/:tableId/join", authRequired, async (req, res) => {
   }
 });
 
-app.get("/api/tables/:tableId/members", async (req, res) => {
-  const { tableId } = req.params;
-
-  try {
-    const result = await pool.query(
-      `
-      SELECT *
-      FROM public.vw_saldo_jogador_mesa
-      WHERE table_id = $1
-      ORDER BY seat_number NULLS LAST, joined_at ASC;
-      `,
-      [tableId]
-    );
-
-    res.json({
-      ok: true,
-      total: result.rows.length,
-      members: result.rows
-    });
-  } catch (error) {
-    console.error("Erro ao listar membros da mesa:", error);
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao listar membros da mesa.",
-      error: error.message
-    });
-  }
-});
-
 /* ============================================================
-   FICHAS
+   ADMIN — MESAS SIMPLES
    ============================================================ */
 
-app.post("/api/chips/add", authRequired, async (req, res) => {
-  const {
-    toWalletId,
-    amount,
-    description
-  } = req.body;
+app.post("/api/admin/tables", authRequired, adminRequired, async (req, res) => {
+  const { name } = req.body;
 
-  if (!toWalletId || !amount) {
+  if (!name) {
     return res.status(400).json({
       ok: false,
-      message: "Informe toWalletId e amount."
-    });
-  }
-
-  try {
-    const result = await pool.query(
-      `
-      INSERT INTO public.chip_transactions (
-        transaction_type,
-        from_wallet_id,
-        to_wallet_id,
-        amount,
-        status,
-        requested_by_user_id,
-        approved_by_user_id,
-        created_by_user_id,
-        description
-      )
-      VALUES (
-        'ADMIN_ADD',
-        $1,
-        $2,
-        $3,
-        'COMPLETED',
-        $4,
-        $4,
-        $4,
-        $5
-      )
-      RETURNING *;
-      `,
-      [
-        SYSTEM_WALLET_ID,
-        toWalletId,
-        amount,
-        req.auth.sub,
-        description || "Adição administrativa de fichas."
-      ]
-    );
-
-    res.json({
-      ok: true,
-      message: "Fichas adicionadas com sucesso.",
-      transaction: result.rows[0]
-    });
-  } catch (error) {
-    console.error("Erro ao adicionar fichas:", error);
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao adicionar fichas.",
-      error: error.message
-    });
-  }
-});
-
-app.post("/api/chips/transfer", authRequired, async (req, res) => {
-  const {
-    fromWalletId,
-    toWalletId,
-    amount,
-    description
-  } = req.body;
-
-  if (!fromWalletId || !toWalletId || !amount) {
-    return res.status(400).json({
-      ok: false,
-      message: "Informe fromWalletId, toWalletId e amount."
+      message: "Informe o nome da mesa."
     });
   }
 
@@ -903,313 +690,52 @@ app.post("/api/chips/transfer", authRequired, async (req, res) => {
 
   try {
     await client.query("BEGIN");
-
-    const sourceWallet = await client.query(
-      `
-      SELECT *
-      FROM public.wallets
-      WHERE id = $1
-        AND user_id = $2
-      LIMIT 1;
-      `,
-      [fromWalletId, req.auth.sub]
-    );
-
-    if (!sourceWallet.rows[0]) {
-      throw new Error("Carteira de origem não pertence ao usuário logado.");
-    }
-
-    const tx = await client.query(
-      `
-      INSERT INTO public.chip_transactions (
-        transaction_type,
-        from_wallet_id,
-        to_wallet_id,
-        amount,
-        status,
-        requested_by_user_id,
-        approved_by_user_id,
-        created_by_user_id,
-        description
-      )
-      VALUES (
-        'PLAYER_TRANSFER',
-        $1,
-        $2,
-        $3,
-        'COMPLETED',
-        $4,
-        $4,
-        $4,
-        $5
-      )
-      RETURNING *;
-      `,
-      [
-        fromWalletId,
-        toWalletId,
-        amount,
-        req.auth.sub,
-        description || "Transferência entre jogadores."
-      ]
-    );
-
-    await client.query("COMMIT");
-
-    res.json({
-      ok: true,
-      message: "Transferência realizada com sucesso.",
-      transaction: tx.rows[0]
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao transferir fichas.",
-      error: error.message
-    });
-  } finally {
-    client.release();
-  }
-});
-
-app.get("/api/chips/trace", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT *
-      FROM public.vw_rastreio_fichas
-      ORDER BY created_at DESC
-      LIMIT 100;
-    `);
-
-    res.json({
-      ok: true,
-      total: result.rows.length,
-      transactions: result.rows
-    });
-  } catch (error) {
-    console.error("Erro ao rastrear fichas:", error);
-
-    res.status(500).json({
-      ok: false,
-      message: "Erro ao rastrear fichas.",
-      error: error.message
-    });
-  }
-});
-
-/* ============================================================
-   DEMO CORRIGIDO
-   ============================================================ */
-
-app.get("/api/demo/create", async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const suffix = Date.now().toString().slice(-6);
-
-    const passwordHash = await bcrypt.hash("123456", 10);
-
-    const user1 = await client.query(
-      `
-      INSERT INTO public.app_users (
-        username,
-        display_name,
-        password_hash,
-        login_provider,
-        avatar_type,
-        avatar_emoji,
-        is_guest
-      )
-      VALUES ($1, $2, $3, 'EMAIL', 'EMOJI', '🂡', false)
-      RETURNING *;
-      `,
-      [`jogador_${suffix}_1`, `Jogador ${suffix} A`, passwordHash]
-    );
-
-    const user2 = await client.query(
-      `
-      INSERT INTO public.app_users (
-        username,
-        display_name,
-        password_hash,
-        login_provider,
-        avatar_type,
-        avatar_emoji,
-        is_guest
-      )
-      VALUES ($1, $2, $3, 'EMAIL', 'EMOJI', '🃏', false)
-      RETURNING *;
-      `,
-      [`jogador_${suffix}_2`, `Jogador ${suffix} B`, passwordHash]
-    );
 
     const table = await client.query(
       `
       INSERT INTO public.game_tables (
         owner_user_id,
         name,
-        description,
         max_players,
         initial_chips,
         visibility,
         status
       )
-      VALUES ($1, $2, 'Mesa criada por teste automático corrigido.', 6, 50, 'LINK_ONLY', 'WAITING')
+      VALUES ($1, $2, 6, 50, 'LINK_ONLY', 'WAITING')
       RETURNING *;
       `,
-      [user1.rows[0].id, `Mesa Teste ${suffix}`]
-    );
-
-    const member1 = await client.query(
-      `
-      INSERT INTO public.table_members (
-        table_id,
-        user_id,
-        seat_number,
-        role,
-        status,
-        is_online,
-        is_ready
-      )
-      VALUES ($1, $2, 1, 'OWNER', 'WAITING', true, true)
-      RETURNING *;
-      `,
-      [table.rows[0].id, user1.rows[0].id]
-    );
-
-    const member2 = await client.query(
-      `
-      INSERT INTO public.table_members (
-        table_id,
-        user_id,
-        seat_number,
-        role,
-        status,
-        is_online,
-        is_ready
-      )
-      VALUES ($1, $2, 2, 'PLAYER', 'WAITING', true, false)
-      RETURNING *;
-      `,
-      [table.rows[0].id, user2.rows[0].id]
-    );
-
-    const wallet1 = await getTableWallet(client, table.rows[0].id, user1.rows[0].id);
-    const wallet2 = await getTableWallet(client, table.rows[0].id, user2.rows[0].id);
-
-    if (!wallet1 || !wallet2) {
-      throw new Error("Carteira da mesa não foi criada automaticamente.");
-    }
-
-    const tx1 = await client.query(
-      `
-      INSERT INTO public.chip_transactions (
-        transaction_type,
-        from_wallet_id,
-        to_wallet_id,
-        amount,
-        status,
-        requested_by_user_id,
-        approved_by_user_id,
-        created_by_user_id,
-        description
-      )
-      VALUES (
-        'ADMIN_ADD',
-        $1,
-        $2,
-        50,
-        'COMPLETED',
-        $3,
-        $3,
-        $3,
-        'Crédito inicial de teste.'
-      )
-      RETURNING *;
-      `,
-      [SYSTEM_WALLET_ID, wallet1.id, SYSTEM_USER_ID]
-    );
-
-    const tx2 = await client.query(
-      `
-      INSERT INTO public.chip_transactions (
-        transaction_type,
-        from_wallet_id,
-        to_wallet_id,
-        amount,
-        status,
-        requested_by_user_id,
-        approved_by_user_id,
-        created_by_user_id,
-        description
-      )
-      VALUES (
-        'ADMIN_ADD',
-        $1,
-        $2,
-        50,
-        'COMPLETED',
-        $3,
-        $3,
-        $3,
-        'Crédito inicial de teste.'
-      )
-      RETURNING *;
-      `,
-      [SYSTEM_WALLET_ID, wallet2.id, SYSTEM_USER_ID]
+      [req.auth.sub, name.trim()]
     );
 
     await client.query(
       `
-      INSERT INTO public.hand_events (
+      INSERT INTO public.table_members (
         table_id,
-        actor_user_id,
-        event_type,
-        action_type,
-        public_message,
-        is_public_log,
-        payload
+        user_id,
+        seat_number,
+        role,
+        status,
+        is_online,
+        is_ready
       )
-      VALUES (
-        $1,
-        $2,
-        'TABLE_CREATED',
-        'CRIAR_MESA',
-        'Mesa de teste criada com dois jogadores.',
-        true,
-        jsonb_build_object('demo', true)
-      );
+      VALUES ($1, $2, 1, 'OWNER', 'WAITING', true, true);
       `,
-      [table.rows[0].id, user1.rows[0].id]
+      [table.rows[0].id, req.auth.sub]
     );
 
     await client.query("COMMIT");
 
     res.json({
       ok: true,
-      message: "Demonstração criada com sucesso. Senha dos usuários demo: 123456",
-      user1: publicUser(user1.rows[0]),
-      user2: publicUser(user2.rows[0]),
-      table: table.rows[0],
-      member1: member1.rows[0],
-      member2: member2.rows[0],
-      wallet1,
-      wallet2,
-      transaction1: tx1.rows[0],
-      transaction2: tx2.rows[0]
+      message: "Mesa criada.",
+      table: table.rows[0]
     });
   } catch (error) {
     await client.query("ROLLBACK");
 
-    console.error("Erro no demo:", error);
-
     res.status(500).json({
       ok: false,
-      message: "Erro ao criar demonstração.",
+      message: "Erro ao criar mesa.",
       error: error.message
     });
   } finally {
@@ -1218,7 +744,7 @@ app.get("/api/demo/create", async (req, res) => {
 });
 
 /* ============================================================
-   SOCKET.IO
+   SOCKET
    ============================================================ */
 
 const server = http.createServer(app);
@@ -1233,26 +759,6 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("Jogador conectado:", socket.id);
 
-  socket.on("criar_mesa", (dados) => {
-    console.log("Mesa criada via socket:", dados);
-
-    socket.emit("mesa_criada", {
-      idMesa: "mesa-teste",
-      nome: dados?.nome || "Mesa de Teste"
-    });
-  });
-
-  socket.on("entrar_mesa", (dados) => {
-    console.log("Jogador entrou na mesa via socket:", dados);
-
-    socket.join(dados.idMesa);
-
-    io.to(dados.idMesa).emit("jogador_entrou", {
-      idJogador: socket.id,
-      nome: dados?.nome || "Jogador"
-    });
-  });
-
   socket.on("disconnect", () => {
     console.log("Jogador desconectado:", socket.id);
   });
@@ -1261,5 +767,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log(`Servidor Lu Online rodando na porta ${PORT}`);
+  console.log(`Servidor Loo Card Game rodando na porta ${PORT}`);
 });
