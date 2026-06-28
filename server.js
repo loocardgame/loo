@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+const { Pool } = require("pg");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -8,19 +9,80 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
 app.get("/", (req, res) => {
   res.json({
     status: "online",
     app: "Lu Online",
-    message: "Backend inicial funcionando no Render"
+    message: "Backend inicial funcionando no Render",
+    databaseConfigured: Boolean(process.env.DATABASE_URL)
   });
 });
 
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
-    service: "loo-api"
+    service: "loo-api",
+    databaseConfigured: Boolean(process.env.DATABASE_URL)
   });
+});
+
+app.get("/db-test", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        now() AS server_time,
+        COUNT(*)::int AS total_users
+      FROM public.app_users;
+    `);
+
+    res.json({
+      ok: true,
+      message: "Conexão com Supabase/PostgreSQL funcionando",
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Erro no teste do banco:", error);
+
+    res.status(500).json({
+      ok: false,
+      message: "Erro ao conectar no banco",
+      error: error.message
+    });
+  }
+});
+
+app.get("/tables-test", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      ORDER BY table_name;
+    `);
+
+    res.json({
+      ok: true,
+      message: "Tabelas encontradas no banco",
+      total: result.rows.length,
+      tables: result.rows
+    });
+  } catch (error) {
+    console.error("Erro ao listar tabelas:", error);
+
+    res.status(500).json({
+      ok: false,
+      message: "Erro ao listar tabelas",
+      error: error.message
+    });
+  }
 });
 
 const server = http.createServer(app);
