@@ -6,13 +6,23 @@
 
   <title>Loo Card Game</title>
 
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/brand/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <meta name="theme-color" content="#050706">
+  <meta name="application-name" content="Loo Card Game">
+  <meta name="apple-mobile-web-app-title" content="Loo Card Game">
+
   <style>
     :root {
       --bg: #050706;
       --panel: #101812;
       --panel2: #16251b;
       --gold: #d8b76c;
-      --green: #0d5b2a;
       --text: #f6f1e7;
       --muted: #aeb8ad;
       --danger: #e95f5f;
@@ -61,18 +71,10 @@
     }
 
     .logo-img {
-      width: 170px;
+      width: 180px;
       max-width: 70%;
       margin: 0 auto 12px;
       display: block;
-    }
-
-    .logo-fallback {
-      font-size: 34px;
-      font-weight: 900;
-      color: var(--gold);
-      letter-spacing: 2px;
-      margin-bottom: 8px;
     }
 
     .subtitle {
@@ -89,7 +91,8 @@
       font-size: 13px;
     }
 
-    input, select {
+    input,
+    select {
       width: 100%;
       border: 1px solid var(--border);
       background: #070c09;
@@ -100,7 +103,8 @@
       font-size: 15px;
     }
 
-    input:focus, select:focus {
+    input:focus,
+    select:focus {
       border-color: var(--gold);
     }
 
@@ -136,11 +140,11 @@
     }
 
     .topbar {
-      height: 72px;
+      min-height: 72px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 22px;
+      padding: 12px 22px;
       border-bottom: 1px solid var(--border);
       background: rgba(0, 0, 0, 0.3);
       position: sticky;
@@ -230,7 +234,8 @@
       min-width: 760px;
     }
 
-    th, td {
+    th,
+    td {
       border-bottom: 1px solid rgba(255,255,255,0.08);
       text-align: left;
       padding: 10px;
@@ -302,8 +307,6 @@
       }
 
       .topbar {
-        height: auto;
-        padding: 14px;
         gap: 12px;
         flex-direction: column;
         align-items: flex-start;
@@ -325,8 +328,8 @@
         border-radius: 22px;
       }
 
-      .logo-fallback {
-        font-size: 28px;
+      .logo-img {
+        width: 150px;
       }
 
       button {
@@ -345,8 +348,7 @@
   <section id="loginPage" class="login-page">
     <div class="login-card">
       <div class="logo-wrap">
-        <img class="logo-img" src="/logo.png" alt="Loo Card Game" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='block';" />
-        <div id="logoFallback" class="logo-fallback" style="display:none;">LOO</div>
+        <img class="logo-img" src="/logo.png" alt="Loo Card Game" />
         <div class="subtitle">Card Game</div>
       </div>
 
@@ -366,7 +368,7 @@
   <section id="appPage" class="app-shell hidden">
     <div class="topbar">
       <div class="brand">
-        <img src="/logo.png" alt="LOO" onerror="this.style.display='none';" />
+        <img src="/assets/brand/icon.svg" alt="LOO" />
         <span>LOO CARD GAME</span>
       </div>
 
@@ -593,7 +595,7 @@
         adminUsers = data.users;
 
         qs("chipsUserSelect").innerHTML = adminUsers
-          .map(u => `<option value="${u.id}">${u.username} — ${u.global_balance} fichas</option>`)
+          .map(u => `<option value="${u.id}">${u.username} — ${Number(u.global_balance).toFixed(2)} fichas</option>`)
           .join("");
 
         qs("adminUsersTable").innerHTML = adminUsers.map(u => `
@@ -664,7 +666,7 @@
       try {
         const userId = qs("chipsUserSelect").value;
 
-        const data = await api("/api/admin/chips/add-global", {
+        await api("/api/admin/chips/add-global", {
           method: "POST",
           body: JSON.stringify({
             userId,
@@ -712,7 +714,7 @@
         const data = await api("/api/hall");
 
         qs("hallSummary").textContent =
-          `Jogador: ${data.user.display_name}\nFichas globais: ${data.user.global_balance}\nPerfil: ${currentUser.role}`;
+          `Jogador: ${data.user.display_name}\nFichas globais: ${Number(data.user.global_balance).toFixed(2)}\nPerfil: ${currentUser.role}`;
 
         if (!data.tables.length) {
           qs("hallTables").innerHTML = `<div class="small">Nenhuma mesa disponível no momento.</div>`;
