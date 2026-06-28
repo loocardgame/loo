@@ -1,0 +1,27 @@
+{
+  "name": "Loo Card Game",
+  "short_name": "Loo",
+  "description": "Jogo online de cartas Loo Card Game.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050706",
+  "theme_color": "#050706",
+  "icons": [
+    {
+      "src": "/assets/brand/android-chrome-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/brand/android-chrome-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/brand/maskable-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
