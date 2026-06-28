@@ -1,14 +1,16 @@
 {
   "name": "loo-api",
-  "version": "0.2.0",
-  "description": "Backend inicial do Lu Online",
+  "version": "0.3.0",
+  "description": "Backend inicial do Lu Online / Loo Card Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "express": "^4.18.3",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",
     "socket.io": "^4.7.5"
   }
