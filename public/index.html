@@ -7,7 +7,6 @@
   <title>Loo Card Game</title>
 
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/brand/apple-touch-icon.png">
@@ -71,10 +70,19 @@
     }
 
     .logo-img {
-      width: 180px;
-      max-width: 70%;
+      width: 190px;
+      max-width: 76%;
       margin: 0 auto 12px;
       display: block;
+    }
+
+    .logo-fallback {
+      display: none;
+      color: var(--gold);
+      font-weight: 900;
+      font-size: 42px;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
     }
 
     .subtitle {
@@ -163,8 +171,8 @@
     }
 
     .brand img {
-      width: 46px;
-      height: 46px;
+      width: 50px;
+      height: 50px;
       object-fit: contain;
     }
 
@@ -184,7 +192,7 @@
 
     .grid-admin {
       display: grid;
-      grid-template-columns: 340px 1fr;
+      grid-template-columns: 360px 1fr;
       gap: 18px;
     }
 
@@ -208,6 +216,13 @@
       gap: 8px;
       flex-wrap: wrap;
       align-items: center;
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
     }
 
     .status {
@@ -336,8 +351,8 @@
         width: 100%;
       }
 
-      .row button {
-        flex: 1;
+      .quick-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -348,7 +363,13 @@
   <section id="loginPage" class="login-page">
     <div class="login-card">
       <div class="logo-wrap">
-        <img class="logo-img" src="/logo.png" alt="Loo Card Game" />
+        <img
+          class="logo-img"
+          src="/logo.png"
+          alt="Loo Card Game"
+          onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='block';"
+        />
+        <div id="logoFallback" class="logo-fallback">LOO</div>
         <div class="subtitle">Card Game</div>
       </div>
 
@@ -368,7 +389,7 @@
   <section id="appPage" class="app-shell hidden">
     <div class="topbar">
       <div class="brand">
-        <img src="/assets/brand/icon.svg" alt="LOO" />
+        <img src="/logo.png" alt="LOO" onerror="this.style.display='none';" />
         <span>LOO CARD GAME</span>
       </div>
 
@@ -396,29 +417,30 @@
             </div>
 
             <div class="card">
-              <h2>Adicionar fichas</h2>
+              <h2>Adicionar / Retirar fichas</h2>
 
               <label>Usuário</label>
               <select id="chipsUserSelect"></select>
+
+              <div class="quick-grid">
+                <button onclick="adjustChips('ADD', 20)">+20</button>
+                <button onclick="adjustChips('ADD', 50)">+50</button>
+                <button onclick="adjustChips('ADD', 100)">+100</button>
+              </div>
+
+              <div class="quick-grid">
+                <button class="danger" onclick="adjustChips('REMOVE', 20)">-20</button>
+                <button class="danger" onclick="adjustChips('REMOVE', 50)">-50</button>
+                <button class="danger" onclick="adjustChips('REMOVE', 100)">-100</button>
+              </div>
 
               <label>Valor manual</label>
               <input id="customChipsAmount" type="number" min="1" placeholder="ex: 75" />
 
               <div class="row" style="margin-top:12px;">
-                <button onclick="addChips(20)">+20</button>
-                <button onclick="addChips(50)">+50</button>
-                <button onclick="addChips(100)">+100</button>
-                <button class="secondary" onclick="addCustomChips()">Adicionar valor</button>
+                <button onclick="adjustCustomChips('ADD')">Adicionar</button>
+                <button class="danger" onclick="adjustCustomChips('REMOVE')">Retirar / Sangria</button>
               </div>
-            </div>
-
-            <div class="card">
-              <h2>Criar mesa simples</h2>
-
-              <label>Nome da mesa</label>
-              <input id="newTableName" placeholder="Mesa dos Amigos" />
-
-              <button class="full" onclick="createTable()">Criar mesa</button>
             </div>
 
             <div class="card">
@@ -630,11 +652,14 @@
 
     async function createUser() {
       try {
+        const username = qs("newUsername").value;
+        const password = qs("newPassword").value;
+
         const data = await api("/api/admin/users", {
           method: "POST",
           body: JSON.stringify({
-            username: qs("newUsername").value,
-            password: qs("newPassword").value
+            username,
+            password
           })
         });
 
@@ -662,26 +687,31 @@
       }
     }
 
-    async function addChips(amount) {
+    async function adjustChips(mode, amount) {
       try {
         const userId = qs("chipsUserSelect").value;
 
-        await api("/api/admin/chips/add-global", {
+        await api("/api/admin/chips/adjust-global", {
           method: "POST",
           body: JSON.stringify({
             userId,
-            amount
+            amount,
+            mode
           })
         });
 
-        setText("adminStatus", `Adicionadas ${amount} fichas.`);
+        const txt = mode === "ADD"
+          ? `Adicionadas ${amount} fichas.`
+          : `Retiradas ${amount} fichas.`;
+
+        setText("adminStatus", txt);
         await loadAdminUsers();
       } catch (error) {
-        setText("adminStatus", "Erro ao adicionar fichas: " + error.message);
+        setText("adminStatus", "Erro ao ajustar fichas: " + error.message);
       }
     }
 
-    async function addCustomChips() {
+    async function adjustCustomChips(mode) {
       const amount = Number(qs("customChipsAmount").value || 0);
 
       if (!amount || amount <= 0) {
@@ -689,24 +719,8 @@
         return;
       }
 
-      await addChips(amount);
+      await adjustChips(mode, amount);
       qs("customChipsAmount").value = "";
-    }
-
-    async function createTable() {
-      try {
-        const name = qs("newTableName").value || "Mesa dos Amigos";
-
-        const data = await api("/api/admin/tables", {
-          method: "POST",
-          body: JSON.stringify({ name })
-        });
-
-        setText("adminStatus", "Mesa criada: " + data.table.name);
-        qs("newTableName").value = "";
-      } catch (error) {
-        setText("adminStatus", "Erro ao criar mesa: " + error.message);
-      }
     }
 
     async function loadHall() {
